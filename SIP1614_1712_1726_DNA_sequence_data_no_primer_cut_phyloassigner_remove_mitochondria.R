@@ -129,9 +129,6 @@ SAM = sample_data(sample_info_tab)
 physeqhet = phyloseq(OTU,TAX,SAM) #create phyloseq object with three components, you can also include fourth object of phylogenetic tree
 physeqhet
 
-###some debate whether rarefy is necessary, need to rarefy for alpha diversity, but before that, try not rarefy first
-###if need to rarefy, remove mock, control, too low read samples, then recreate a phyloseq object to rarefy
-#phyloseqrar = rarefy_even_depth(physeqhet, sample.size = X) #Substitute the minimum number of the sample size where X is located. 
 
 # now we'll generate a proportions table for summarizing:
 taxa_proportions_tab <- apply(count_tab_order, 2, function(x) x/sum(x)*100)
@@ -590,39 +587,6 @@ dev.off()# 13 clusters, but big cluster makes more sense, 70% dissimilarity leve
 write.csv(OTU1_noAlt,"OTU1_noAlt.csv")
 
 
-#####If angular transformation on data to normalize it before NMDS plot
-max(count_tab_order_nonSIP)
-count_tab_order_nonSIP_asin <- asin(sqrt(count_tab_order_nonSIP/100000))   #asin need -1 to 1 value
-OTU_nonSIP_asin = otu_table(count_tab_order_nonSIP_asin, taxa_are_rows = TRUE)
-physeqhet_nonSIP_asin_NMDS = phyloseq(OTU_nonSIP_asin,TAX,SAM_nonSIP_NMDS)
-physeqhet_nonSIP_asin_NMDS_noAlt=subset_taxa(physeqhet_nonSIP_asin_NMDS,multi_Taxonomy!="Gammaproteobacteria_Alteromonadales_Alteromonadaceae")
-#Transform to even sampling depth:
-physeqhet_nonSIP_asin_NMDS_noAlt_norm = transform_sample_counts(physeqhet_nonSIP_asin_NMDS_noAlt, function(x) 1E6 * x/sum(x))
-#plot NMDS
-physeqhet_nonSIP_asin_NMDS_noAlt_norm.ord <- ordinate(physeqhet_nonSIP_asin_NMDS_noAlt_norm, "NMDS", "bray")
-p_nonSIP_asin_noAlt = plot_ordination(physeqhet_nonSIP_asin_NMDS_noAlt_norm, physeqhet_nonSIP_asin_NMDS_noAlt_norm.ord)
-pdf("NonSIP_NMDS_asin_noAlt.pdf",width=10)
-p_nonSIP_asin_noAlt+geom_point(size=5, aes(color=Sample_Name,shape=Time_point)) + #if I put label="Sample_Name" above in the plot_ordination, the size is too small, so separate layer here in ggplot
-  theme(plot.subtitle = element_text(vjust = 1), 
-        plot.caption = element_text(vjust = 1), 
-        axis.text.x = element_text(size = 14)) + theme(axis.title = element_text(size = 14), 
-                                                       axis.text.y = element_text(size = 14)) 
-dev.off()
-#stress 0.06213047,<0.1, fair fit, similar pattern as non transformed
-
-OTU1_asin_noAlt = as(otu_table(physeqhet_nonSIP_asin_NMDS_noAlt_norm), "matrix")
-# transpose if necessary
-if(taxa_are_rows(physeqhet_nonSIP_asin_NMDS_noAlt_norm)){OTU1_asin_noAlt <- t(OTU1_asin_noAlt)}
-#Run simprof on the data
-res_asin_noAlt_bray <- simprof(data= OTU1_asin_noAlt, 
-                          method.distance="braycurtis")  #alpha 0.05
-# Graph the result
-pl.color_asin_noAlt <- simprof.plot(res_asin_noAlt_bray)
-pdf("simprof_bray_cluster_asin_noAlt.pdf")
-plot(pl.color_asin_noAlt)
-dev.off()#cluster different, 1726 CD, EF, GH together
-
-
 
 
 
@@ -649,11 +613,6 @@ p_nonSIP_M_noAlt+geom_point(size=5, aes(color=Sample_Name,shape=Time_point)) + #
                                                        axis.text.y = element_text(size = 14))  + theme(axis.ticks = element_line(colour = "black"), 
                                                                                                        panel.background = element_rect(fill = NA)) + theme(axis.text = element_text(colour = "black"), 
                                                                                                                                                            panel.background = element_rect(colour = "black")) + theme(panel.grid.major = element_line(linetype = "blank"), 
-                                                                                                                                                                                                                      panel.grid.minor = element_line(linetype = "blank"), 
-                                                                                                                                                                                                                      panel.background = element_rect(size = 0.9))
-dev.off()
-#doesn't change pattern
-
 
 
 
