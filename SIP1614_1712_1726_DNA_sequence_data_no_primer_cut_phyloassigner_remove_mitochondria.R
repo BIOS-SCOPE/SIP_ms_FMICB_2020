@@ -52,7 +52,7 @@ library("reshape")
 
 rm(list=ls())
 getwd()
-setwd("/Users/ShutingLiu/Desktop/Computer/F/UCSB_Research/Writing/SIP_paper/Fig/for_ms_6_3_20")
+setwd("/Users/ShutingLiu/Desktop/Computer/F/UCSB_Research/Writing/SIP_paper/Fig/for_ms_8_4_20")
 getwd()
 
 #Create a phyloseq object out of your data files
@@ -129,6 +129,9 @@ SAM = sample_data(sample_info_tab)
 physeqhet = phyloseq(OTU,TAX,SAM) #create phyloseq object with three components, you can also include fourth object of phylogenetic tree
 physeqhet
 
+###some debate whether rarefy is necessary, need to rarefy for alpha diversity, but before that, try not rarefy first
+###if need to rarefy, remove mock, control, too low read samples, then recreate a phyloseq object to rarefy
+#phyloseqrar = rarefy_even_depth(physeqhet, sample.size = X) #Substitute the minimum number of the sample size where X is located. 
 
 # now we'll generate a proportions table for summarizing:
 taxa_proportions_tab <- apply(count_tab_order, 2, function(x) x/sum(x)*100)
@@ -587,6 +590,39 @@ dev.off()# 13 clusters, but big cluster makes more sense, 70% dissimilarity leve
 write.csv(OTU1_noAlt,"OTU1_noAlt.csv")
 
 
+#####If angular transformation on data to normalize it before NMDS plot
+max(count_tab_order_nonSIP)
+count_tab_order_nonSIP_asin <- asin(sqrt(count_tab_order_nonSIP/100000))   #asin need -1 to 1 value
+OTU_nonSIP_asin = otu_table(count_tab_order_nonSIP_asin, taxa_are_rows = TRUE)
+physeqhet_nonSIP_asin_NMDS = phyloseq(OTU_nonSIP_asin,TAX,SAM_nonSIP_NMDS)
+physeqhet_nonSIP_asin_NMDS_noAlt=subset_taxa(physeqhet_nonSIP_asin_NMDS,multi_Taxonomy!="Gammaproteobacteria_Alteromonadales_Alteromonadaceae")
+#Transform to even sampling depth:
+physeqhet_nonSIP_asin_NMDS_noAlt_norm = transform_sample_counts(physeqhet_nonSIP_asin_NMDS_noAlt, function(x) 1E6 * x/sum(x))
+#plot NMDS
+physeqhet_nonSIP_asin_NMDS_noAlt_norm.ord <- ordinate(physeqhet_nonSIP_asin_NMDS_noAlt_norm, "NMDS", "bray")
+p_nonSIP_asin_noAlt = plot_ordination(physeqhet_nonSIP_asin_NMDS_noAlt_norm, physeqhet_nonSIP_asin_NMDS_noAlt_norm.ord)
+pdf("NonSIP_NMDS_asin_noAlt.pdf",width=10)
+p_nonSIP_asin_noAlt+geom_point(size=5, aes(color=Sample_Name,shape=Time_point)) + #if I put label="Sample_Name" above in the plot_ordination, the size is too small, so separate layer here in ggplot
+  theme(plot.subtitle = element_text(vjust = 1), 
+        plot.caption = element_text(vjust = 1), 
+        axis.text.x = element_text(size = 14)) + theme(axis.title = element_text(size = 14), 
+                                                       axis.text.y = element_text(size = 14)) 
+dev.off()
+#stress 0.06213047,<0.1, fair fit, similar pattern as non transformed
+
+OTU1_asin_noAlt = as(otu_table(physeqhet_nonSIP_asin_NMDS_noAlt_norm), "matrix")
+# transpose if necessary
+if(taxa_are_rows(physeqhet_nonSIP_asin_NMDS_noAlt_norm)){OTU1_asin_noAlt <- t(OTU1_asin_noAlt)}
+#Run simprof on the data
+res_asin_noAlt_bray <- simprof(data= OTU1_asin_noAlt, 
+                          method.distance="braycurtis")  #alpha 0.05
+# Graph the result
+pl.color_asin_noAlt <- simprof.plot(res_asin_noAlt_bray)
+pdf("simprof_bray_cluster_asin_noAlt.pdf")
+plot(pl.color_asin_noAlt)
+dev.off()#cluster different, 1726 CD, EF, GH together
+
+
 
 
 
@@ -613,6 +649,11 @@ p_nonSIP_M_noAlt+geom_point(size=5, aes(color=Sample_Name,shape=Time_point)) + #
                                                        axis.text.y = element_text(size = 14))  + theme(axis.ticks = element_line(colour = "black"), 
                                                                                                        panel.background = element_rect(fill = NA)) + theme(axis.text = element_text(colour = "black"), 
                                                                                                                                                            panel.background = element_rect(colour = "black")) + theme(panel.grid.major = element_line(linetype = "blank"), 
+                                                                                                                                                                                                                      panel.grid.minor = element_line(linetype = "blank"), 
+                                                                                                                                                                                                                      panel.background = element_rect(size = 0.9))
+dev.off()
+#doesn't change pattern
+
 
 
 
@@ -867,8 +908,8 @@ View(temp_z_score)
 #convert matrix to data frame and then reorganize column into order
 z_score_no_order<-data.frame(temp_z_score)
 View(z_score_no_order)
-#correct some oceanospirillales_NA to oligotrophs
-z_score<-z_score_no_order[c(1,2,3,6,8,11,19,20,21,23,30,5,7,9,10,12:15,17,22,24:27,29,31:33,35:53,4,16,18,28,34),c(5,1,6,2,7,3,8,4,11,9,12,10,17,13,18,14,19,15,20,16)]#group copiotrophs, oligotrophs, and archaea
+#correct some oceanospirillales_NA to oligotrophs, Plancomycete to oligotroph
+z_score<-z_score_no_order[c(1,2,3,6,8,11,20,21,23,30,5,7,9,10,12:15,17,19,22,24:27,29,31:33,35:53,4,16,18,28,34),c(5,1,6,2,7,3,8,4,11,9,12,10,17,13,18,14,19,15,20,16)]#group copiotrophs, oligotrophs, and archaea
 View(z_score)
 colnames(z_score)<-c("July 2016 S Control T0","July 2016 S Control TF","July 2016 S TW lysate PPL T0","July 2016 S TW lysate PPL TF","July 2016 M Control T0","July 2016 M Control TF","July 2016 M TW lysate PPL T0","July 2016 M TW lysate PPL TF","July 2017 M Control T0","July 2017 M Control TF","July 2017 M Amino acid T0","July 2017 M Amino acid TF","Nov 2017 M Control T0","Nov 2017 M Control TF","Nov 2017 M Syn lysate T0","Nov 2017 M Syn lysate TF","Nov 2017 M Syn lysate PPL T0","Nov 2017 M Syn lysate PPL TF","Nov 2017 M Syn exudate PPL T0","Nov 2017 M Syn exudate PPL TF")
 #if same name "M Control" for AE1712 and AE1726, won't plot the column, need unique column names
