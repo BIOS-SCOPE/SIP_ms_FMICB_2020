@@ -8,6 +8,7 @@
 
 ######PREP DATA########
 
+install.packages("growthcurver_0.3.0.tar", repos=NULL, type="source")
 #Part 1. load necessary packages and data ----
 library(tidyverse)
 library(data.table)
